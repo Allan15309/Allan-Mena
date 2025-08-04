@@ -1,0 +1,140 @@
+﻿ <!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Contraseñas CAY Security</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/CaySecurity/PasswordGenerator/main/assets/favicon.ico">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <div class="top-controls">
+        <button id="manual-btn" class="manual-btn">Manual de Usuario</button>
+        <button id="theme-toggle" class="theme-toggle-btn">???</button>
+    </div>
+
+    <div class="container">
+        <h1>Generador de Contraseñas CAY</h1>
+
+        <div class="password-display">
+            <input type="password" id="password" readonly value="Cargando...">
+            <div class="action-buttons">
+                <button id="copy-btn" class="btn">Copiar</button>
+                <button id="toggle-password-visibility" class="btn" title="Mostrar/Ocultar contraseña">???</button>
+            </div>
+        </div>
+        
+        <div id="strength-indicator"></div>
+        <p id="requirements-feedback"></p>
+
+        <div class="options-grid">
+            <div class="form-group">
+                <label for="length">Longitud de Contraseña:</label>
+                <input type="number" id="length" value="12" min="4" max="32">
+                <input type="range" id="length-range" min="4" max="32" value="12">
+            </div>
+            
+            <div class="form-group">
+                <label for="num-passwords">Cantidad a Generar:</label>
+                <input type="number" id="num-passwords" value="1" min="1" max="10">
+                <input type="range" id="num-passwords-range" min="1" max="10" value="1">
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="include-uppercase" checked>
+                <label for="include-uppercase">Incluir Mayúsculas</label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="include-numbers" checked>
+                <label for="include-numbers">Incluir Números</label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="include-special" checked>
+                <label for="include-special">Incluir Caracteres Especiales</label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="exclude-ambiguous">
+                <label for="exclude-ambiguous" title="Evita caracteres como 'l', 'I', 'O', '0' que se pueden confundir.">Excluir Caracteres Ambiguos</label>
+            </div>
+        </div>
+
+        <button id="generate-btn" class="btn" style="width: 100%; margin-top: 25px;">Generar Contraseña</button>
+    </div>
+    
+    <div class="container passphrase-section">
+        <h2>Generador de Frases de Contraseña (Passphrase)</h2>
+        <p class="description">Crea frases de contraseña seguras y fáciles de recordar.</p>
+        <div class="password-display">
+            <input type="password" id="passphrase-output" readonly value="Cargando...">
+            <div class="action-buttons">
+                <button id="copy-passphrase-btn" class="btn">Copiar</button>
+                <button id="toggle-passphrase-visibility" class="btn" title="Mostrar/Ocultar frase de contraseña">???</button>
+            </div>
+        </div>
+        <div class="options-grid">
+            <div class="form-group">
+                <label for="word-count">Número de palabras:</label>
+                <input type="number" id="word-count" value="4" min="3" max="8">
+                <input type="range" id="word-count-range" min="3" max="8" value="4">
+            </div>
+            <div class="form-group">
+                <label for="separator">Separador:</label>
+                <select id="separator">
+                    <option value="-">-</option>
+                    <option value="_">_</option>
+                    <option value=" ">Espacio</option>
+                    <option value=".">.</option>
+                </select>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="capitalize-first-letter">
+                <label for="capitalize-first-letter">Capitalizar la primera letra</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="add-random-number">
+                <label for="add-random-number">Añadir número aleatorio</label>
+            </div>
+        </div>
+        <button id="generate-passphrase-btn" class="btn" style="width: 100%; margin-top: 25px;">Generar Frase</button>
+    </div>
+
+    <div class="container pwned-check-section">
+        <h2>Verificar Contraseña Comprometida</h2>
+        <p class="description">Introduce una contraseña para ver si ha sido expuesta en una filtración de datos pública (usando Have I Been Pwned).</p>
+        <div class="form-group">
+            <label for="check-password-input">Contraseña a Verificar:</label>
+            <input type="password" id="check-password-input" placeholder="Pega tu contraseña aquí">
+        </div>
+        <button id="check-pwned-btn" class="btn" style="width: 100%;">Verificar Ahora</button>
+    </div>
+
+    <div class="container history-section">
+        <h2>Historial de Contraseñas</h2>
+        <div class="history-buttons">
+            <button id="export-history-btn" class="btn">Exportar a PDF</button>
+            <button id="import-history-btn" class="btn">Importar Historial</button>
+            <input type="file" id="import-history-file" accept=".json" style="display: none;">
+            <button id="clear-saved-btn" class="btn">Limpiar Historial</button>
+        </div>
+        <ul id="saved-passwords-list">
+            <li class="empty-message">No hay contraseñas en el historial.</li>
+        </ul>
+    </div>
+
+    <div id="notification-message" class="notification" style="display: none;"></div>
+
+    <div id="manual-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div id="manual-content"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
