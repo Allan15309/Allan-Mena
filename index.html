@@ -1,0 +1,699 @@
+ <!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Activos y Bienes - Colegio San Luis Gonzaga</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fef2f2',
+              100: '#fee2e2',
+              500: '#ef4444', // Rojo institucional
+              600: '#dc2626',
+              700: '#b91c1c',
+              800: '#991b1b',
+              900: '#7f1d1d',
+            },
+            navy: {
+              800: '#1e3a8a',
+              900: '#0f172a', // Azul oscuro institucional
+              950: '#030712',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Estilos Personalizados y Franjas -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="h-full flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- FRANJAS INSTITUCIONALES SUPERIORES (ROJO, AZUL OSCURO, BLANCO) -->
+  <div class="w-full h-2 flex shrink-0 print:hidden">
+    <div class="w-1/3 h-full bg-red-600"></div>
+    <div class="w-1/3 h-full bg-blue-950"></div>
+    <div class="w-1/3 h-full bg-white border-b border-slate-200"></div>
+  </div>
+
+  <!-- Header / Navbar -->
+  <header class="bg-navy-900/95 backdrop-blur border-b border-blue-900/60 sticky top-0 z-30 print:hidden shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20 gap-4">
+        
+        <!-- Logo Institucional HD -->
+        <div class="flex items-center gap-3.5 shrink-0">
+          <div class="w-14 h-14 rounded-2xl bg-white border-2 border-red-600 flex items-center justify-center overflow-hidden shadow-xl shadow-black/40 p-0.5">
+            <img src="images.jpg" alt="Escudo Colegio San Luis Gonzaga" class="w-full h-full object-contain">
+          </div>
+          <div class="hidden sm:block">
+            <h1 class="font-bold text-base leading-tight text-white">Sistema de Inventario</h1>
+            <p class="text-xs text-slate-300">Colegio de San Luis Gonzaga</p>
+          </div>
+        </div>
+
+        <!-- Búsqueda Global -->
+        <div class="relative flex-1 max-w-md">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <i class="ph ph-magnifying-glass text-lg"></i>
+          </div>
+          <input type="text" id="global-search" 
+                 class="w-full pl-10 pr-4 py-2 bg-slate-900/90 border border-blue-900 rounded-lg text-xs sm:text-sm placeholder-slate-400 text-slate-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition"
+                 placeholder="Buscar activo o bien controlado...">
+          <div id="search-results" class="absolute top-full left-0 right-0 mt-1.5 bg-navy-900 border border-blue-900 rounded-lg shadow-2xl max-h-80 overflow-y-auto hidden z-50 divide-y divide-blue-900/50"></div>
+        </div>
+
+        <!-- Acciones, Notificaciones y Selector de Rol -->
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+          
+          <!-- BANDEJA DE NOTIFICACIONES -->
+          <div class="relative">
+            <button id="btn-notifications" title="Notificaciones de inventario" class="p-2 text-slate-300 hover:text-red-400 hover:bg-blue-950/50 rounded-lg transition text-xl flex items-center justify-center relative">
+              <i class="ph ph-bell"></i>
+              <span id="notif-badge" class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-600 rounded-full ring-2 ring-navy-900 hidden"></span>
+            </button>
+            <div id="notif-dropdown" class="absolute right-0 top-full mt-2 w-80 bg-navy-900 border border-blue-900 rounded-xl shadow-2xl hidden z-50 overflow-hidden">
+              <div class="p-3 border-b border-blue-900 flex items-center justify-between bg-blue-950">
+                <span class="text-xs font-bold text-white flex items-center gap-1.5"><i class="ph ph-bell-ringing text-red-500"></i> Alertas de Sistema</span>
+                <span id="notif-count" class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">0</span>
+              </div>
+              <div id="notif-list" class="max-h-72 overflow-y-auto divide-y divide-blue-900/40 text-xs"></div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 bg-navy-950 border border-blue-900 rounded-lg px-2.5 py-1">
+            <i id="role-icon" class="ph ph-shield-check text-red-500 text-lg shrink-0"></i>
+            <div class="flex flex-col">
+              <span class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold leading-none">Perfil</span>
+              <select id="user-role-select" class="bg-transparent text-xs text-slate-100 font-bold focus:outline-none cursor-pointer pt-0.5 max-w-[110px] sm:max-w-none truncate">
+                <option value="admin" class="bg-navy-900 text-white">Administrador</option>
+                <option value="docente" class="bg-navy-900 text-white">Docente</option>
+              </select>
+            </div>
+          </div>
+
+          <label title="Importar desde CSV/Excel" class="p-2 text-slate-300 hover:text-red-400 hover:bg-blue-950/50 rounded-lg transition text-xl flex items-center justify-center cursor-pointer">
+            <i class="ph ph-file-arrow-up"></i>
+            <input type="file" id="csv-file-input" accept=".csv" class="hidden" onchange="importarCSV(event)">
+          </label>
+
+          <button id="btn-export-excel" title="Exportar CSV" class="p-2 text-slate-300 hover:text-emerald-400 hover:bg-blue-950/50 rounded-lg transition text-xl flex items-center justify-center">
+            <i class="ph ph-file-csv"></i>
+          </button>
+          <button id="btn-seed" title="Cargar datos demo" class="p-2 text-slate-300 hover:text-sky-400 hover:bg-blue-950/50 rounded-lg transition text-xl flex items-center justify-center">
+            <i class="ph ph-database"></i>
+          </button>
+          <button id="btn-export" title="Respaldo JSON" class="p-2 text-slate-300 hover:text-white hover:bg-blue-950/50 rounded-lg transition text-xl flex items-center justify-center">
+            <i class="ph ph-download-simple"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Pestañas de Navegación -->
+  <nav class="bg-navy-950/80 border-b border-blue-900/50 print:hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6 overflow-x-auto no-scrollbar">
+      <button data-tab="tab-aulas-47" class="nav-tab active flex items-center gap-2 py-3 px-1 border-b-2 border-red-600 text-red-500 font-medium text-xs sm:text-sm transition whitespace-nowrap">
+        <i class="ph ph-door text-lg"></i> Pabellón Sur (Activos)
+      </button>
+      <button data-tab="tab-aulas-26" class="nav-tab flex items-center gap-2 py-3 px-1 border-b-2 border-transparent text-slate-300 hover:text-white font-medium text-xs sm:text-sm transition whitespace-nowrap">
+        <i class="ph ph-door-open text-lg"></i> Pabellón Central (Activos)
+      </button>
+      <button data-tab="tab-bienes-controlados" class="nav-tab flex items-center gap-2 py-3 px-1 border-b-2 border-transparent text-slate-300 hover:text-white font-medium text-xs sm:text-sm transition whitespace-nowrap">
+        <i class="ph ph-lock-key text-lg text-rose-400"></i> Bienes Controlados
+      </button>
+      <button data-tab="tab-solicitudes" class="nav-tab flex items-center gap-2 py-3 px-1 border-b-2 border-transparent text-slate-300 hover:text-white font-medium text-xs sm:text-sm transition relative whitespace-nowrap">
+        <i class="ph ph-arrows-left-right text-lg"></i> Solicitudes de Traslado
+        <span id="badge-pending" class="hidden ml-1 px-1.5 py-0.5 text-[10px] bg-red-600 text-white font-bold rounded-full">0</span>
+      </button>
+      <button data-tab="tab-historial" class="nav-tab flex items-center gap-2 py-3 px-1 border-b-2 border-transparent text-slate-300 hover:text-white font-medium text-xs sm:text-sm transition whitespace-nowrap">
+        <i class="ph ph-clock-counter-clockwise text-lg"></i> Historial y Bajas
+      </button>
+      <button data-tab="tab-mantenimiento" class="nav-tab flex items-center gap-2 py-3 px-1 border-b-2 border-transparent text-slate-300 hover:text-white font-medium text-sm transition relative whitespace-nowrap">
+        <i class="ph ph-wrench text-lg"></i> Mantenimiento
+      </button>
+      <button data-tab="tab-stats" class="nav-tab flex items-center gap-2 py-3 px-1 border-b-2 border-transparent text-slate-300 hover:text-white font-medium text-xs sm:text-sm transition whitespace-nowrap">
+        <i class="ph ph-chart-pie-slice text-lg"></i> Reportes
+      </button>
+    </div>
+  </nav>
+
+  <!-- Contenedor Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ENCABEZADO OFICIAL PARA IMPRESIÓN -->
+    <div id="print-header-oficial" class="hidden print:block mb-6 border-b-2 border-black pb-3">
+      <div class="flex items-center justify-between gap-4">
+        <div class="w-16 h-16 shrink-0 flex items-center justify-center">
+          <img src="images.jpg" alt="Escudo" class="w-full h-full object-contain">
+        </div>
+        <div class="text-left flex-1">
+          <h2 class="text-xs font-bold uppercase tracking-wider">JUNTA ADMINISTRATIVA COLEGIO DE SAN LUIS GONZAGA</h2>
+          <p class="text-[11px] font-semibold text-slate-700">Sistema de Control de Inventario</p>
+          <p id="print-subtitle-seccion" class="text-[10px] text-slate-600 font-bold">ACTA OFICIAL DE ASIGNACIÓN</p>
+        </div>
+        <div class="text-right shrink-0 border border-black p-2 rounded">
+          <p class="text-[9px] font-bold uppercase">Nº de Acta:</p>
+          <p id="print-consecutivo" class="text-xs font-mono font-bold text-black">ACTA-2026-0001</p>
+        </div>
+      </div>
+      <h1 id="print-titulo-acta" class="text-sm font-extrabold tracking-widest mt-3 uppercase text-center">FORMULARIO DE ASIGNACIÓN</h1>
+    </div>
+
+    <!-- PESTAÑA 1: PABELLÓN SUR -->
+    <section id="tab-aulas-47" class="tab-content space-y-6">
+      <div class="bg-navy-900/90 border border-blue-900/60 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between print:hidden shadow-md">
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <label class="text-xs sm:text-sm font-medium text-slate-200 flex items-center gap-1.5 whitespace-nowrap shrink-0">
+            <i class="ph ph-door-open text-red-500 text-lg"></i> Seleccionar Aula / Espacio (Pabellón Sur):
+          </label>
+          <select id="aula-select-47" class="w-full md:w-64 bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-100 focus:ring-2 focus:ring-red-600 focus:outline-none"></select>
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-r from-navy-900 to-navy-900/80 border border-blue-900/60 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md">
+        <div>
+          <div class="flex items-center gap-3">
+            <h2 id="aula-title-47" class="text-2xl font-bold text-white">Aula 01</h2>
+            <span id="aula-badge-count-47" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">0 activos</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300 mt-1">Colegio de San Luis Gonzaga - Pabellón Sur.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="imprimirActaSeccion('aula-47')" class="bg-blue-950 hover:bg-blue-900 text-slate-100 px-3 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition border border-blue-900"><i class="ph ph-printer text-base"></i> Acta de esta Sección</button>
+          <button onclick="openModalActivo(null, 47)" class="admin-only bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition shadow-lg shadow-red-600/25"><i class="ph ph-plus-circle text-base"></i> Registrar Activo</button>
+        </div>
+      </div>
+
+      <div class="bg-navy-900 border border-blue-900/60 rounded-xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm text-slate-300 table-fixed min-w-[700px]">
+            <thead class="bg-navy-950/80 text-[11px] uppercase text-slate-300 font-semibold border-b border-blue-900/60">
+              <tr>
+                <th class="px-5 py-3.5 w-32">Código</th>
+                <th class="px-5 py-3.5 w-auto">Nombre / Descripción</th>
+                <th class="px-5 py-3.5 w-36">Categoría</th>
+                <th class="px-5 py-3.5 w-32">Estado</th>
+                <th class="px-5 py-3.5 w-36 text-right print:hidden">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="activos-table-body-47" class="divide-y divide-blue-900/30"></tbody>
+          </table>
+        </div>
+        <div id="activos-empty-47" class="hidden py-12 text-center">
+          <p class="text-slate-400 text-xs">No hay activos registrados en este espacio.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 2: PABELLÓN CENTRAL -->
+    <section id="tab-aulas-26" class="tab-content hidden space-y-6">
+      <div class="bg-navy-900 border border-blue-900/60 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between print:hidden shadow-md">
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <label class="text-xs sm:text-sm font-medium text-slate-200 flex items-center gap-1.5 whitespace-nowrap shrink-0">
+            <i class="ph ph-door text-sky-400 text-lg"></i> Seleccionar Aula / Taller (Pabellón Central):
+          </label>
+          <select id="aula-select-26" class="w-full md:w-60 bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-100 focus:ring-2 focus:ring-red-600 focus:outline-none"></select>
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-r from-navy-900 to-navy-900/80 border border-blue-900/60 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md">
+        <div>
+          <div class="flex items-center gap-3">
+            <h2 id="aula-title-26" class="text-2xl font-bold text-white">Aula Taller 01</h2>
+            <span id="aula-badge-count-26" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20">0 activos</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300 mt-1">Colegio de San Luis Gonzaga - Pabellón Central (26 Aulas).</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="imprimirActaSeccion('aula-26')" class="bg-blue-950 hover:bg-blue-900 text-slate-100 px-3 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition border border-blue-900"><i class="ph ph-printer text-base"></i> Acta de este Taller</button>
+          <button onclick="openModalActivo(null, 26)" class="admin-only bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition shadow-lg shadow-sky-600/25"><i class="ph ph-plus-circle text-base"></i> Registrar Activo</button>
+        </div>
+      </div>
+
+      <div class="bg-navy-900 border border-blue-900/60 rounded-xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm text-slate-300 table-fixed min-w-[700px]">
+            <thead class="bg-navy-950/80 text-[11px] uppercase text-slate-300 font-semibold border-b border-blue-900/60">
+              <tr>
+                <th class="px-5 py-3.5 w-32">Código</th>
+                <th class="px-5 py-3.5 w-auto">Nombre / Descripción</th>
+                <th class="px-5 py-3.5 w-36">Categoría</th>
+                <th class="px-5 py-3.5 w-32">Estado</th>
+                <th class="px-5 py-3.5 w-36 text-right print:hidden">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="activos-table-body-26" class="divide-y divide-blue-900/30"></tbody>
+          </table>
+        </div>
+        <div id="activos-empty-26" class="hidden py-12 text-center">
+          <p class="text-slate-400 text-xs">No hay activos registrados en este espacio.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA: BIENES CONTROLADOS -->
+    <section id="tab-bienes-controlados" class="tab-content hidden space-y-6">
+      <div class="bg-gradient-to-r from-navy-900 to-navy-900/80 border border-blue-900/60 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md">
+        <div>
+          <div class="flex items-center gap-3">
+            <h2 class="text-2xl font-bold text-white">Control de Bienes</h2>
+            <span id="bienes-badge-count" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">0 bienes</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300 mt-1">Junta Administrativa - Área de Contabilidad (Formulario Oficial).</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="imprimirActaSeccion('bienes')" class="bg-blue-950 hover:bg-blue-900 text-slate-100 px-3 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition border border-blue-900"><i class="ph ph-printer text-base"></i> Acta de Bienes</button>
+          <button onclick="openModalBienControlado()" class="admin-only bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition shadow-lg shadow-rose-600/25"><i class="ph ph-shield-plus text-base"></i> Registrar Bien</button>
+        </div>
+      </div>
+
+      <div class="bg-navy-900 border border-blue-900/60 rounded-xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm text-slate-300 table-fixed min-w-[700px]">
+            <thead class="bg-navy-950/80 text-[11px] uppercase text-slate-300 font-semibold border-b border-blue-900/60">
+              <tr>
+                <th class="px-5 py-3.5 w-44">Nº DE CONTROL</th>
+                <th class="px-5 py-3.5 w-auto">DESCRIPCIÓN</th>
+                <th class="px-5 py-3.5 w-48">Custodio / Responsable</th>
+                <th class="px-5 py-3.5 w-36 text-right print:hidden">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="bienes-table-body" class="divide-y divide-blue-900/30"></tbody>
+          </table>
+        </div>
+        <div id="bienes-empty" class="hidden py-12 text-center">
+          <p class="text-slate-400 text-xs">No hay bienes controlados registrados.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 4: SOLICITUDES DE TRASLADO -->
+    <section id="tab-solicitudes" class="tab-content hidden space-y-6">
+      <div class="bg-gradient-to-r from-navy-900 to-navy-900/80 border border-blue-900/60 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md">
+        <div>
+          <h2 class="text-2xl font-bold text-white">Solicitudes de Traslado</h2>
+          <p class="text-xs sm:text-sm text-slate-300">Movimientos y reubicaciones de equipos institucionales.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="imprimirActaSeccion('traslados')" class="bg-blue-950 hover:bg-blue-900 text-slate-100 px-3 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition border border-blue-900"><i class="ph ph-printer text-base"></i> Acta de Traslados</button>
+          <button id="btn-nueva-solicitud" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition"><i class="ph ph-plus text-base"></i> Nueva Solicitud</button>
+        </div>
+      </div>
+
+      <div class="bg-navy-900 border border-blue-900/60 rounded-xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm text-slate-300 table-fixed min-w-[700px]">
+            <thead class="bg-navy-950/80 text-[11px] uppercase text-slate-300 font-semibold border-b border-blue-900/60">
+              <tr>
+                <th class="px-5 py-3.5 w-24">Fecha</th>
+                <th class="px-5 py-3.5 w-56">Elemento / Bien</th>
+                <th class="px-5 py-3.5 w-44">Origen &rarr; Destino</th>
+                <th class="px-5 py-3.5 w-48">Solicitante / Motivo</th>
+                <th class="px-5 py-3.5 w-28">Estado</th>
+                <th class="px-5 py-3.5 w-36 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="solicitudes-table-body" class="divide-y divide-blue-900/30"></tbody>
+          </table>
+        </div>
+        <div id="solicitudes-empty" class="hidden py-12 text-center text-slate-400 text-xs">No hay solicitudes registradas.</div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 5: HISTORIAL Y BAJAS -->
+    <section id="tab-historial" class="tab-content hidden space-y-6">
+      <div class="bg-gradient-to-r from-navy-900 to-navy-900/80 border border-blue-900/60 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md">
+        <div>
+          <h2 class="text-2xl font-bold text-white">Historial y Bajas Institucionales</h2>
+          <p class="text-xs sm:text-sm text-slate-300">Registro oficial de auditoría de bajas y eventos de inventario.</p>
+        </div>
+        <button onclick="imprimirActaSeccion('historial')" class="bg-blue-950 hover:bg-blue-900 text-slate-100 px-3 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition border border-blue-900">
+          <i class="ph ph-printer text-base"></i> Acta de Auditoría y Bajas
+        </button>
+      </div>
+
+      <div class="bg-navy-900 border border-blue-900/60 rounded-xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm text-slate-300 table-fixed min-w-[750px]">
+            <thead class="bg-navy-950/80 text-[11px] uppercase text-slate-300 font-semibold border-b border-blue-900/60">
+              <tr>
+                <th class="px-5 py-3.5 w-24">Fecha</th>
+                <th class="px-5 py-3.5 w-32">Tipo de Evento</th>
+                <th class="px-5 py-3.5 w-52">Elemento (Código y Nombre)</th>
+                <th class="px-5 py-3.5 w-auto">Detalles / Motivo</th>
+                <th class="px-5 py-3.5 w-36">Responsable</th>
+              </tr>
+            </thead>
+            <tbody id="historial-table-body" class="divide-y divide-blue-900/30"></tbody>
+          </table>
+        </div>
+        <div id="historial-empty" class="hidden py-12 text-center text-slate-400 text-xs">No hay registros en el historial.</div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 6: MANTENIMIENTO E INCIDENCIAS -->
+    <section id="tab-mantenimiento" class="tab-content hidden space-y-6">
+      <div class="bg-gradient-to-r from-navy-900 to-navy-900/80 border border-blue-900/60 rounded-xl p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md">
+        <div>
+          <h2 class="text-2xl font-bold text-white">Mantenimiento e Incidencias</h2>
+          <p class="text-xs sm:text-sm text-slate-300">Reportes de fallas y reparaciones en equipos.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="imprimirActaSeccion('mantenimiento')" class="bg-blue-950 hover:bg-blue-900 text-slate-100 px-3 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition border border-blue-900"><i class="ph ph-printer text-base"></i> Acta de Mantenimiento</button>
+          <button id="btn-nuevo-mantenimiento" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg font-medium text-xs flex items-center gap-2 transition"><i class="ph ph-warning text-base"></i> Reportar Incidencia</button>
+        </div>
+      </div>
+
+      <div class="bg-navy-900 border border-blue-900/60 rounded-xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm text-slate-300 table-fixed min-w-[750px]">
+            <thead class="bg-navy-950/80 text-[11px] uppercase text-slate-300 font-semibold border-b border-blue-900/60">
+              <tr>
+                <th class="px-5 py-3.5 w-24">Fecha</th>
+                <th class="px-5 py-3.5 w-52">Elemento Afectado</th>
+                <th class="px-5 py-3.5 w-auto">Falla o Avería</th>
+                <th class="px-5 py-3.5 w-36">Reportado por</th>
+                <th class="px-5 py-3.5 w-28">Costo (₡)</th>
+                <th class="px-5 py-3.5 w-28">Estado</th>
+                <th class="px-5 py-3.5 w-28 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="mantenimiento-table-body" class="divide-y divide-blue-900/30"></tbody>
+          </table>
+        </div>
+        <div id="mantenimiento-empty" class="hidden py-12 text-center text-slate-400 text-xs">No hay reportes de mantenimiento activos.</div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 7: REPORTES Y ESTADÍSTICAS -->
+    <section id="tab-stats" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-navy-900 border border-blue-900/60 rounded-xl p-5 flex items-center gap-4 shadow-md">
+          <div class="w-12 h-12 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center text-2xl border border-red-500/20">
+            <i class="ph ph-cube"></i>
+          </div>
+          <div>
+            <span class="text-[11px] text-slate-300 font-medium uppercase tracking-wider block">Total Activos</span>
+            <h3 id="stat-total-activos" class="text-2xl font-bold text-white">0</h3>
+          </div>
+        </div>
+        <div class="bg-navy-900 border border-blue-900/60 rounded-xl p-5 flex items-center gap-4 shadow-md">
+          <div class="w-12 h-12 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center text-2xl border border-rose-500/20">
+            <i class="ph ph-lock-key"></i>
+          </div>
+          <div>
+            <span class="text-[11px] text-slate-300 font-medium uppercase tracking-wider block">Bienes Controlados</span>
+            <h3 id="stat-total-bienes" class="text-2xl font-bold text-white">0</h3>
+          </div>
+        </div>
+        <div class="bg-navy-900 border border-blue-900/60 rounded-xl p-5 flex items-center gap-4 shadow-md">
+          <div class="w-12 h-12 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center text-2xl border border-amber-500/20">
+            <i class="ph ph-arrows-left-right"></i>
+          </div>
+          <div>
+            <span class="text-[11px] text-slate-300 font-medium uppercase tracking-wider block">Traslados Pendientes</span>
+            <h3 id="stat-pending-requests" class="text-2xl font-bold text-white">0</h3>
+          </div>
+        </div>
+        <div class="bg-navy-900 border border-blue-900/60 rounded-xl p-5 flex items-center gap-4 shadow-md">
+          <div class="w-12 h-12 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-2xl border border-blue-500/20">
+            <i class="ph ph-door"></i>
+          </div>
+          <div>
+            <span class="text-[11px] text-slate-300 font-medium uppercase tracking-wider block">Espacios Totales</span>
+            <h3 class="text-2xl font-bold text-white">Módulos & Oficinas</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-navy-900 border border-blue-900/60 rounded-xl p-5 shadow-md">
+          <h3 class="text-sm font-bold text-white mb-4">Distribución por Categoría</h3>
+          <div class="h-60 relative flex items-center justify-center"><canvas id="chart-categorias"></canvas></div>
+        </div>
+        <div class="bg-navy-900 border border-blue-900/60 rounded-xl p-5 shadow-md">
+          <h3 class="text-sm font-bold text-white mb-4">Estado de los Activos</h3>
+          <div class="h-60 relative flex items-center justify-center"><canvas id="chart-estados"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LÍNEAS DE FIRMA OFICIALES PARA IMPRESIÓN PDF -->
+    <div id="print-signatures" class="hidden print:block mt-16 pt-6 border-t border-slate-400">
+      <div class="grid grid-cols-3 gap-8 text-center text-[10px] text-black">
+        <div>
+          <div class="border-b border-black mb-2 h-12"></div>
+          <p class="font-bold">Docente / Encargado de Espacio</p>
+          <p class="text-[9px] text-slate-600">Firma y Cédula</p>
+        </div>
+        <div>
+          <div class="border-b border-black mb-2 h-12"></div>
+          <p class="font-bold">Área de Contabilidad</p>
+          <p class="text-[9px] text-slate-600">Verificación e Inventario</p>
+        </div>
+        <div>
+          <div class="border-b border-black mb-2 h-12"></div>
+          <p class="font-bold">Dirección / Junta Administrativa</p>
+          <p class="text-[9px] text-slate-600">Vº Bº Autorizado</p>
+        </div>
+      </div>
+      <p class="text-[8px] text-slate-500 text-center mt-8 uppercase tracking-widest">Documento Institucional Oficial - Colegio de San Luis Gonzaga</p>
+    </div>
+
+  </main>
+
+  <!-- MODAL AUTENTICACIÓN -->
+  <div id="modal-auth" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-navy-900 border border-blue-900 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-blue-900 pb-3">
+        <h3 class="text-base font-bold text-white">Cambiar a <span id="auth-role-name">Perfil</span></h3>
+        <button type="button" class="close-modal text-slate-400"><i class="ph ph-x text-lg"></i></button>
+      </div>
+      <form id="form-auth" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 mb-1">Contraseña de Acceso *</label>
+          <input type="password" id="auth-password" required class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white" placeholder="••••••••">
+          <p id="auth-error" class="text-red-400 text-[10px] mt-1 hidden">Contraseña incorrecta.</p>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" class="close-modal px-3 py-1.5 bg-blue-950 text-slate-200 rounded-lg border border-blue-900">Cancelar</button>
+          <button type="submit" class="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL BIEN CONTROLADO -->
+  <div id="modal-bien" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-navy-900 border border-blue-900 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-blue-900 pb-3">
+        <h3 class="text-base font-bold text-white">Registrar Bien Controlado</h3>
+        <button type="button" class="close-modal text-slate-400"><i class="ph ph-x text-lg"></i></button>
+      </div>
+      <form id="form-bien" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 mb-1">Nº de Control (Placa) *</label>
+          <input type="text" id="bien-codigo" required class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white font-mono" placeholder="BC-00008">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Descripción del Bien *</label>
+          <input type="text" id="bien-nombre" required class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white" placeholder="Ej. Olla arrocera a gas para 50 tzs RWA">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Custodio / Responsable *</label>
+          <input type="text" id="bien-custodio" required class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white" placeholder="Ej. Cocina / Comedor">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" class="close-modal px-3 py-1.5 bg-blue-950 text-slate-200 rounded-lg border border-blue-900">Cancelar</button>
+          <button type="submit" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-lg">Guardar Bien</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL ACTIVO -->
+  <div id="modal-activo" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-navy-900 border border-blue-900 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-blue-900 pb-3">
+        <h3 class="text-base font-bold text-white">Registrar Activo en Espacio</h3>
+        <button type="button" class="close-modal text-slate-400"><i class="ph ph-x text-lg"></i></button>
+      </div>
+      <form id="form-activo" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 mb-1">Ubicación (Espacio) *</label>
+          <select id="activo-aula" class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white"></select>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Código de Activo *</label>
+          <input type="text" id="activo-codigo" required class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white font-mono" placeholder="ACT-SUR01">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Nombre / Descripción *</label>
+          <input type="text" id="activo-nombre" required class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white" placeholder="Ej. Proyector EPSON">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-300 mb-1">Categoría</label>
+            <select id="activo-categoria" class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white">
+              <option value="Tecnología">Tecnología</option>
+              <option value="Mobiliario">Mobiliario</option>
+              <option value="Equipo Didáctico">Equipo Didáctico</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Estado</label>
+            <select id="activo-estado" class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white">
+              <option value="Excelente">Excelente</option>
+              <option value="Bueno">Bueno</option>
+              <option value="Regular">Regular</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" class="close-modal px-3 py-1.5 bg-blue-950 text-slate-200 rounded-lg border border-blue-900">Cancelar</button>
+          <button type="submit" class="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg">Guardar Activo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL SOLICITUD -->
+  <div id="modal-solicitud" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-navy-900 border border-blue-900 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-blue-900 pb-3">
+        <h3 class="text-base font-bold text-white">Nueva Solicitud de Traslado</h3>
+        <button type="button" class="close-modal text-slate-400"><i class="ph ph-x text-lg"></i></button>
+      </div>
+      <form id="form-solicitud" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 mb-1">Seleccionar Elemento *</label>
+          <select id="solicitud-activo" class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white"></select>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Origen Actual</label>
+          <input type="text" id="solicitud-origen-display" disabled class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-slate-400">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Nuevo Destino / Ubicación *</label>
+          <select id="solicitud-destino" required class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white"></select>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Solicitante *</label>
+          <input type="text" id="solicitud-solicitante" required class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white" placeholder="Nombre del docente o encargado">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Motivo del Traslado</label>
+          <input type="text" id="solicitud-motivo" class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white" placeholder="Ej. Reubicación académica">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" class="close-modal px-3 py-1.5 bg-blue-950 text-slate-200 rounded-lg border border-blue-900">Cancelar</button>
+          <button type="submit" class="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg">Enviar Solicitud</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL BAJA -->
+  <div id="modal-baja" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-navy-900 border border-blue-900 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-blue-900 pb-3">
+        <h3 class="text-base font-bold text-white">Dar de Baja Elemento</h3>
+        <button type="button" class="close-modal text-slate-400"><i class="ph ph-x text-lg"></i></button>
+      </div>
+      <form id="form-baja" class="space-y-3 text-xs">
+        <input type="hidden" id="baja-activo-id">
+        <div>
+          <label class="block text-slate-300 mb-1">Elemento</label>
+          <input type="text" id="baja-activo-info" disabled class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-slate-400">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Motivo de Baja / Obsolescencia *</label>
+          <textarea id="baja-motivo" required rows="3" class="w-full bg-navy-950 border border-blue-900 rounded-lg p-2 text-white" placeholder="Indique el motivo oficial..."></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" class="close-modal px-3 py-1.5 bg-blue-950 text-slate-200 rounded-lg border border-blue-900">Cancelar</button>
+          <button type="submit" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-lg">Confirmar Baja</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL MANTENIMIENTO -->
+  <div id="modal-mantenimiento" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-navy-900 border border-blue-900 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-blue-900 pb-3">
+        <h3 class="text-base font-bold text-white">Reportar Incidencia o Falla</h3>
+        <button type="button" class="close-modal text-slate-400"><i class="ph ph-x text-lg"></i></button>
+      </div>
+      <form id="form-mantenimiento" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 mb-1">Seleccionar Elemento *</label>
+          <select id="maint-activo" class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white"></select>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Descripción de la Avería *</label>
+          <textarea id="maint-descripcion" required rows="2" class="w-full bg-navy-950 border border-blue-900 rounded-lg p-2 text-white" placeholder="Detalle el problema..."></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-300 mb-1">Reportado por *</label>
+            <input type="text" id="maint-reportado" required class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white" placeholder="Nombre">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Costo Estimado (₡)</label>
+            <input type="number" id="maint-costo" class="w-full bg-navy-950 border border-blue-900 rounded-lg px-3 py-2 text-white" placeholder="0">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" class="close-modal px-3 py-1.5 bg-blue-950 text-slate-200 rounded-lg border border-blue-900">Cancelar</button>
+          <button type="submit" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-lg">Registrar Falla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HISTORIAL RÁPIDO -->
+  <div id="modal-historial" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-navy-900 border border-blue-900 rounded-2xl max-w-sm w-full p-5 space-y-3 shadow-2xl text-xs">
+      <div class="flex justify-between items-center border-b border-blue-900 pb-2">
+        <h3 class="text-sm font-bold text-white">Detalle del Elemento</h3>
+        <button type="button" class="close-modal text-slate-400"><i class="ph ph-x text-lg"></i></button>
+      </div>
+      <div>
+        <p class="text-slate-400">Código:</p>
+        <p id="h-codigo" class="font-mono font-bold text-white text-sm"></p>
+      </div>
+      <div>
+        <p class="text-slate-400">Nombre:</p>
+        <p id="h-nombre" class="font-medium text-white"></p>
+      </div>
+      <div>
+        <p class="text-slate-400">Ubicación / Custodio:</p>
+        <p id="h-aula" class="text-slate-200"></p>
+      </div>
+      <div class="flex justify-end pt-2">
+        <button type="button" class="close-modal px-3 py-1.5 bg-blue-950 text-slate-200 rounded-lg border border-blue-900">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script Principal -->
+  <script src="script.js"></script>
+</body>
+</html>
